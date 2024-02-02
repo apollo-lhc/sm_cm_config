@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 """Generate XML file from YAML input"""
 import xml.etree.ElementTree as ET
 from pprint import pprint
@@ -6,12 +6,14 @@ import argparse
 import os
 import yaml
 
+zm_num_entries = 1024 
+
 #% %
 def make_node(parent: ET.Element, myid: str, thedict: dict, addr2: int, bit: int, 
               parent_id: str) -> ET.Element:
     """create the node to be inserted into the xml tree"""
 # pylint: disable=too-many-branches
-# I disable this check because as far as I can tell it's wrong
+#I disable this check because as far as I can tell it's wrong
     thenode = ET.SubElement(parent, 'node')
     myid = myid.replace(' ', '_')
     thenode.set('id', myid)
@@ -103,25 +105,21 @@ class reg:
 
     def overlaps(self, other):
         """calculate overlap between two objects"""
-        actual_size = self.size * (self.width/16) # the self.size is counted based on a 16-bit data 
         if (self.start <= other.start and self.end >= other.start):
             return True
         if (self.start <= other.end and self.end >= other.end):
             return True
         if (self.start >= other.start and self.end <= other.end):
             return True
-        if (abs(self.start - other.start) < actual_size): # the next other.start is larger than self.start + self.size when e.g. data is 32-bit   
-            return True
         return False
 
     def overloads(self):
         """check if the object overloads the register space"""
-        if self.start + self.size >= 1023:
+        if self.start + self.size >= zm_num_entries - 1:
             return True
         return False
 
-
-# custom file type for yaml file, to be used with argparse
+#custom file type for yaml file, to be used with argparse
 def yaml_file(filename):
     """custom file type for yaml file, to be used with argparse"""
     if not filename.endswith('.yml'):
@@ -132,7 +130,7 @@ parser = argparse.ArgumentParser(description='Process YAML for XML.')
 parser.add_argument('-v', '--verbose', action='store_true',
                     help='increase output verbosity')
 parser.add_argument('-d', '--directory', type=str, help='output directory')
-# this argument is required, one input file ending with yaml extension
+#this argument is required, one input file ending with yaml extension
 parser.add_argument('input_file', metavar='file', type=yaml_file,
                     help='input yaml file name')
 
@@ -157,9 +155,9 @@ with open(args.input_file, encoding='ascii') as f:
 cm = ET.Element('node')
 cm.set('id', 'CM')
 cm.set('address', '0x00000000')
-prev_addr = 0x0
-prev_j = 0x0
-prev_bit = 0x0
+prev_addr = 0x0 #keep track of the most recent address that comes into a pair of bytes for 8-bit masking 
+prev_j = 0x0 #keep track of the order of postfixes in each name node  
+prev_bit = 0x0 #keep track of the even or odd order of bytes globally sent for masking
 #% %
 config = y['config']
 
@@ -178,22 +176,20 @@ for c in config:  # loop over entries in configuration (sensor category)
                     i += 1
                     j += 1
                     continue
-                if (bit == 1 and j == 0):
+                if (bit == 1 and j == 0):   #the previous name node has odd bytes so this postfix node uses the previous postfix address but masks off the lower byte 
                     pp = node = ET.SubElement(cm, 'node')
                     pp.set('id', n)
                     pp.set('address', str(hex(prev_addr)))
                     node = make_node(pp, p, c, j, bit, n)
-                elif (bit == 0 and j == 0):
+                elif (bit == 0 and j == 0): #starting a new postfix node in a new name node
                     pp = node = ET.SubElement(cm, 'node')
                     pp.set('id', n)
                     pp.set('address', str(hex(addr)))
                     node = make_node(pp, p, c, j, bit, n)
-                else:
-                    if (prev_bit == 0 and prev_j == 0):
-                        node = make_node(pp, p, c, prev_j, bit, n)
-                    elif (prev_bit == 0):
+                else: # any non-first byte in a name node 
+                    if (prev_bit == 0):  #the upper byte of the previous postfix node
                         node = make_node(pp, p, c, j, bit, n)
-                    else :  
+                    else :               #the low byte with an increasing postfix node by one 
                         node = make_node(pp, p, c, j+1, bit, n)
                 prev_addr = addr
                 prev_j = j  
@@ -205,7 +201,7 @@ for c in config:  # loop over entries in configuration (sensor category)
             i += 1
 tree = ET.ElementTree(cm)
 ET.indent(tree, space='\t')
-# create output file name based on input file, replacing 'yml' with 'xml'
+#create output file name based on input file, replacing 'yml' with 'xml'
 out_name = os.path.basename(args.input_file)[:-len('.yml')] + '.xml'
 out_name = args.directory + '/' + out_name
 if args.verbose:
