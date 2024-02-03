@@ -1,19 +1,20 @@
-name: zynqmon configuration file
-cm_hw_rev: 2B
-sm_hw_rev: 1A
-sm_fw_rev: 1A
-revision: 1
+metadata:
+  name: zynqmon configuration file
+  cm_hw_rev: 2B
+  sm_hw_rev: 1A
+  sm_fw_rev: 1A
+  revision: 1
 
 
 config:
   - name: firefly
     start: 0
-    count: 40
+    count: 60
     mcu_call: firefly_info
     mcu_extra_call: null
     type: uint16_t
     extra: Table=CM_FF_MON;Status=1
-    names:
+    devices:
       - F1_P1_Tx12 
       - F1_P1_Rx12
       - F1_P2_Tx12 
@@ -34,26 +35,27 @@ config:
       - F2_P5_XCVR4 
       - F2_P6_XCVR4
       - F2_P7_XCVR4
-    postfixes: 
+    sensors: 
       - Temp_C
       - OptPow
+      - TxDisabled
   - name: uptime
-    start: 44
+    start: 60
     count: 2
     type: uint32_t
     mcu_call: uptime
     mcu_extra_call: null
     extra: Table=CM_MON;Column=Minutes;Status=1
-    names:
+    sensors:
       - MCU_UPTIME
   - name: psmon
-    start: 47
+    start: 62
     count: 84
     mcu_call: psmon
     mcu_extra_call: null
     type: fp16
     extra: Table=CM_MON;Status=2
-    names: 
+    devices: 
       - 1V8
       - 3V3
       - F1VCCINT1_S1
@@ -68,7 +70,7 @@ config:
       - F1AVCC
       - F2AVTT
       - F2AVCC
-    postfixes: 
+    sensors: 
       - TEMP1
       - TEMP3
       - VIN
@@ -76,22 +78,22 @@ config:
       - IOUT
       - STATUS_WORD
   - name: gitversion
-    start: 132
+    start: 146
     count: 10
     type: char
-    size: 5
+    char_size: 5
     mcu_call: gitversion
     mcu_extra_call: null
-    names:
+    sensors:
       - MCU_FW_VER
   - name: adcmon
-    start: 143
+    start: 156
     count: 21
     mcu_call: adcmon
     mcu_extra_call: null
     type: fp16
     extra: Table=CM_MON;Status=1;Column=ADC
-    names:
+    sensors:
       - VCC_V120 
       - VCC_MV33
       - VCC_V33
@@ -114,13 +116,13 @@ config:
       - F2_TEMP
       - TM4C_TEMP
   - name: fpga
-    start: 165
+    start: 177
     count: 8
     type: fp16
     extra: Table=CM_MON;Column=Temp_C;Status=2;
     mcu_call: fpga
     mcu_extra_call: null
-    names:
+    sensors:
       - F1_TEMP_SLR0
       - F1_TEMP_SLR1
       - F1_TEMP_SLR2
@@ -130,17 +132,16 @@ config:
       - F2_TEMP_SLR2
       - F2_TEMP_SLR3
   - name: clkmonr0a
-    start: 174
-    count: 8
+    start: 185
+    count: 7
     type: uint16_t
     extra: Table=CM_CLK_MON;Status=1
     mcu_call: clock
     mcu_extra_call: 0
-    names: 
+    devices: 
       - R0A
-    postfixes:
-      - PN_BASE0
-      - PN_BASE1
+    sensors:
+      - PN_BASE
       - DEVICE_REV
       - I2C_ADDR
       - STATUS_OR_LOSXAXB
@@ -148,20 +149,19 @@ config:
       - LOSIN_FLG_OR_LOL
       - STICKY_FLG
   - name: clkmon
-    start: 182
-    count: 32
+    start: 192
+    count: 28
     type: uint16_t
     extra: Table=CM_CLK_MON;Status=1
     mcu_call: clock
     mcu_extra_call: 1
-    names: 
+    devices: 
       - R0B
       - R1A
       - R1B
       - R1C
-    postfixes:
-      - PN_BASE0
-      - PN_BASE1
+    sensors:
+      - PN_BASE
       - DEVICE_REV
       - I2C_ADDR
       - STATUS_OR_LOSXAXB
@@ -169,62 +169,62 @@ config:
       - LOSIN_FLG_OR_LOL
       - STICKY_FLG
   - name: clkr0aconfigversion
-    start: 216
-    count: 4
-    type: char
-    size: 2
-    mcu_call: clkconfigversion
-    mcu_extra_call: 0
-    names:
-      - MCU_CLKR0A_VER
-  - name: clkr0bconfigversion
-    start: 220
-    count: 4
-    type: char
-    size: 2
-    mcu_call: clkconfigversion
-    mcu_extra_call: 1
-    names:
-      - MCU_CLKR0B_VER
-  - name: clkr1aconfigversion
-    start: 224
-    count: 4
-    type: char
-    size: 2
-    mcu_call: clkconfigversion
-    mcu_extra_call: 2
-    names:
-      - MCU_CLKR1A_VER
-  - name: clkr1bconfigversion
     start: 228
     count: 4
     type: char
-    size: 2
+    char_size: 2
     mcu_call: clkconfigversion
-    mcu_extra_call: 3
-    names:
-      - MCU_CLKR1B_VER
-  - name: clkr1cconfigversion
+    mcu_extra_call: 0
+    sensors:
+      - MCU_CLKR0A_VER
+  - name: clkr0bconfigversion
     start: 232
     count: 4
     type: char
-    size: 2
+    char_size: 2
+    mcu_call: clkconfigversion
+    mcu_extra_call: 1
+    sensors:
+      - MCU_CLKR0B_VER
+  - name: clkr1aconfigversion
+    start: 236
+    count: 4
+    type: char
+    char_size: 2
+    mcu_call: clkconfigversion
+    mcu_extra_call: 2
+    sensors:
+      - MCU_CLKR1A_VER
+  - name: clkr1bconfigversion
+    start: 240
+    count: 4
+    type: char
+    char_size: 2
+    mcu_call: clkconfigversion
+    mcu_extra_call: 3
+    sensors:
+      - MCU_CLKR1B_VER
+  - name: clkr1cconfigversion
+    start: 244
+    count: 4
+    type: char
+    char_size: 2
     mcu_call: clkconfigversion
     mcu_extra_call: 4
-    names:
+    sensors:
       - MCU_CLKR1C_VER
   - name: firefly_bits
-    start: 236
+    start: 248
     count: 8
     type: uint16_t
     extra: Table=CM_FFARGV_MON;Status=1
     mcu_call: firefly_bits
     mcu_extra_call: null
-    names:
+    devices:
       - F1_FFL12CH
       - F1_FFLDAQ
       - F2_FFL12CH
       - F2_FFLDAQ
-    postfixes:
+    sensors:
       - IS_FF25Gbs
       - IS_PRESENT
