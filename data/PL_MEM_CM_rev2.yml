@@ -81,7 +81,7 @@ config:
     start: 146
     count: 10
     type: char
-    char_size: 5
+    char_count: 20
     mcu_call: gitversion
     mcu_extra_call: null
     sensors:
@@ -172,7 +172,7 @@ config:
     start: 228
     count: 4
     type: char
-    char_size: 2
+    char_count: 9
     mcu_call: clkconfigversion
     mcu_extra_call: 0
     sensors:
@@ -181,7 +181,7 @@ config:
     start: 232
     count: 4
     type: char
-    char_size: 2
+    char_count: 9
     mcu_call: clkconfigversion
     mcu_extra_call: 1
     sensors:
@@ -190,7 +190,7 @@ config:
     start: 236
     count: 4
     type: char
-    char_size: 2
+    char_count: 9
     mcu_call: clkconfigversion
     mcu_extra_call: 2
     sensors:
@@ -199,7 +199,7 @@ config:
     start: 240
     count: 4
     type: char
-    char_size: 2
+    char_count: 9
     mcu_call: clkconfigversion
     mcu_extra_call: 3
     sensors:
@@ -208,7 +208,7 @@ config:
     start: 244
     count: 4
     type: char
-    char_size: 2
+    char_count: 9
     mcu_call: clkconfigversion
     mcu_extra_call: 4
     sensors:

@@ -7,10 +7,11 @@
  the sensors are repeated for each device.
  """
 
+from math import ceil
 import xml.etree.ElementTree as ET
 import argparse
 import os
-from pprint import pprint
+import pprint
 import yaml
 
 import utils # local import
@@ -21,7 +22,7 @@ def sensor_size(thedict: dict) -> int:
     if '32' in thedict['type']:
         sz = 4
     elif 'char' in thedict['type']:
-        sz = 1*thedict['char_size'] # 1 for char type
+        sz = 1*thedict['char_count'] # 1 for char type
     return sz
 
 def type_to_format(thedict: dict) -> str:
@@ -55,7 +56,9 @@ def make_node(parent: ET.Element, myid: str, thedict: dict, address: int) -> ET.
     # char type sensors are handled differently
     if thedict['type'] == 'char':
         thenode.set('mode', "incremental")
-        thenode.set('size', str(hex(thedict['char_size'])))
+        val = int(ceil(thedict['char_count']/4.)) # 4 chars per 32 bit word here
+        print(f"char_count: {thedict['char_count']}, val: {val}")
+        thenode.set('size', str(hex(val)))
     else: # all other types have masks
         mask = (1 << width) - 1
         is_odd = address % 2 == 1
@@ -94,8 +97,6 @@ def main():
 
     with open(args.input_file, encoding='ascii') as f:
         y = yaml.load(f, Loader=yaml.FullLoader)
-        if args.verbose:
-            pprint(y)
 
     # This is the parent(root) tag onto which other tags would be
     # created
@@ -103,15 +104,19 @@ def main():
     cm.set('id', 'CM')
     cm.set('address', '0x00000000')
 
+    pprinter = pprint.PrettyPrinter(indent=4)
+
     # start processing the yaml file
     config = y['config']
     sensor_count = 0 # in 16 bit words
     for c in config:  # loop over entries in configuration (sensor category)
         if args.verbose:
-            print("category:", c)
+            print("category:",)
+            pprinter.pprint(c)
         # if there are several devices in the category, handle the case by iterating over them
         devices = c.get('devices', [])
-        category_size = len(devices)*len(c['sensors'])*sensor_size(c)
+        device_size = max(len(devices), 1)
+        category_size = device_size*len(c['sensors'])*sensor_size(c)
         device = devices.pop(0) if devices else ""
 
         if args.verbose:
@@ -125,8 +130,8 @@ def main():
                 pp = cm
             for sensor in c['sensors']:
                 if args.verbose:
-                    print("sensor:", sensor)
-                node = make_node(pp, sensor, c, sensor_count)
+                    print(f"sensor: {device}.{sensor}")
+                make_node(pp, sensor, c, sensor_count)
                 sensor_count += sensor_size(c) // 2
             if devices:
                 device = devices.pop(0)
