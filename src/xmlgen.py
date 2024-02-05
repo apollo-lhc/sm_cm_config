@@ -1,5 +1,11 @@
 #! /usr/bin/env python
-# generate the XML file from the YAML file
+""" 
+ Generate the XML file from the YAML file.
+ The yaml file has a 'config' entry. This in turn contains a list of entries
+ that represent various groups of sensors. For each group, there is a list of
+ sensors and possibly a list of devices. If there are devices, then
+ the sensors are repeated for each device.
+ """
 
 import xml.etree.ElementTree as ET
 import argparse
@@ -9,13 +15,13 @@ import yaml
 
 import utils # local import
 
-def type_to_size(thedict: dict) -> int:
+def sensor_size(thedict: dict) -> int:
     """calculate the size of the sensor in bytes"""
     sz = 2 # default size
     if '32' in thedict['type']:
         sz = 4
     elif 'char' in thedict['type']:
-        sz = 1
+        sz = 1*thedict['char_size'] # 1 for char type
     return sz
 
 def type_to_format(thedict: dict) -> str:
@@ -39,20 +45,20 @@ def make_node(parent: ET.Element, myid: str, thedict: dict, address: int) -> ET.
     thenode = ET.SubElement(parent, 'node')
     myid = myid.replace(' ', '_')
     thenode.set('id', myid)
-    theaddr = int(address/2)
-    thenode.set('address', str(hex(theaddr)))
+    halfaddr = int(address/2)
+    thenode.set('address', str(hex(halfaddr)))
     thenode.set("permission", "r")
-    width = type_to_size(thedict) # size in bytes
+    width = sensor_size(thedict)*8 # size in bits
     theformat = type_to_format(thedict) # format of the sensor
     thenode.set('format', theformat)
 
     # char type sensors are handled differently
     if thedict['type'] == 'char':
         thenode.set('mode', "incremental")
-        thenode.set('size', str(hex(thedict['size'])))
+        thenode.set('size', str(hex(thedict['char_size'])))
     else: # all other types have masks
         mask = (1 << width) - 1
-        is_odd = address % 2
+        is_odd = address % 2 == 1
         if not is_odd :
             thenode.set('mask', "0x{0:08X}".format(mask))
         else:
@@ -71,7 +77,8 @@ def main():
     parser = argparse.ArgumentParser(description='Process YAML for XML.')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='increase output verbosity')
-    parser.add_argument('-d', '--directory', type=str, help='output directory')
+    parser.add_argument('-d', '--directory', type=str, help='output directory',
+                        default='.')
     # this argument is required, one input file ending with yaml extension
     parser.add_argument('input_file', metavar='file', type=utils.yaml_file,
                         help='input yaml file name')
@@ -90,24 +97,25 @@ def main():
         if args.verbose:
             pprint(y)
 
-    #This is the parent(root) tag
-    #onto which other tags would be
-    #created
+    # This is the parent(root) tag onto which other tags would be
+    # created
     cm = ET.Element('node')
     cm.set('id', 'CM')
     cm.set('address', '0x00000000')
 
     # start processing the yaml file
     config = y['config']
-
+    sensor_count = 0 # in 16 bit words
     for c in config:  # loop over entries in configuration (sensor category)
+        if args.verbose:
+            print("category:", c)
         # if there are several devices in the category, handle the case by iterating over them
-        if "devices" in c:
-            devices = c['devices']
-            device = devices.pop(0)
-        else: # if there are no devies, create a list with one empty string
-            devices = []
-            device = ""
+        devices = c.get('devices', [])
+        category_size = len(devices)*len(c['sensors'])*sensor_size(c)
+        device = devices.pop(0) if devices else ""
+
+        if args.verbose:
+            print("category_size:", category_size)
         while True:
             # if there are devices
             if device:
@@ -118,7 +126,8 @@ def main():
             for sensor in c['sensors']:
                 if args.verbose:
                     print("sensor:", sensor)
-                node = make_node(pp, sensor, c, device)
+                node = make_node(pp, sensor, c, sensor_count)
+                sensor_count += sensor_size(c) // 2
             if devices:
                 device = devices.pop(0)
             else:
