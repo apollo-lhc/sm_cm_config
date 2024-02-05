@@ -9,7 +9,7 @@ import yaml
 zm_num_entries = 1024
 
 #% %
-def make_node(parent: ET.Element, myid: str, thedict: dict, addr2: int, bit: int,
+def make_node(parent: ET.Element, myid: str, thedict: dict, addr2: int, i_bit: int,
               parent_id: str) -> ET.Element:
     """create the node to be inserted into the xml tree"""
 # pylint: disable=too-many-branches
@@ -19,7 +19,7 @@ def make_node(parent: ET.Element, myid: str, thedict: dict, addr2: int, bit: int
     thenode.set('id', myid)
 #address is half of the sensor address since these are 32 bit addresses
     theaddr = int(addr2/2)
-    remain = bit
+    remain = i_bit
     thenode.set('address', str(hex(theaddr)))
 #this appears to be on all the nodes
     thenode.set("permission", "r")
@@ -92,12 +92,12 @@ def calc_size(thedict: dict) -> int:
 #and a pretty print method
 class reg:
     """create an object with a name, and a start end end register"""
-    def __init__(self, name, sta, end, sz, width):
+    def __init__(self, name, sta, end, sz, ww):
         self.name = name
         self.start = sta
         self.end = end
         self.size = sz
-        self.width = width
+        self.width = ww
 
     def __str__(self):
         return "name: " + self.name + " start: " + str(self.start) + \
@@ -194,7 +194,7 @@ for c in config:  # loop over entries in configuration (sensor category)
                     pp.set('address', str(hex(addr)))
                     node = make_node(pp, p, c, j, bit, n)
                 else: # any non-first byte in a name node
-                    if (prev_bit == 0):  #the upper byte of the previous postfix node
+                    if prev_bit == 0:  #the upper byte of the previous postfix node
                         node = make_node(pp, p, c, j, bit, n)
                     else :               #the low byte with an increasing postfix node by one
                         node = make_node(pp, p, c, j+1, bit, n)
