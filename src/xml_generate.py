@@ -6,10 +6,10 @@ import argparse
 import os
 import yaml
 
-zm_num_entries = 1024 
+zm_num_entries = 1024
 
 #% %
-def make_node(parent: ET.Element, myid: str, thedict: dict, addr2: int, bit: int, 
+def make_node(parent: ET.Element, myid: str, thedict: dict, addr2: int, bit: int,
               parent_id: str) -> ET.Element:
     """create the node to be inserted into the xml tree"""
 # pylint: disable=too-many-branches
@@ -155,9 +155,11 @@ with open(args.input_file, encoding='ascii') as f:
 cm = ET.Element('node')
 cm.set('id', 'CM')
 cm.set('address', '0x00000000')
-prev_addr = 0x0 #keep track of the most recent address that comes into a pair of bytes for 8-bit masking 
-prev_j = 0x0 #keep track of the order of postfixes in each name node  
-prev_bit = 0x0 #keep track of the even or odd order of bytes globally sent for masking
+prev_addr = 0x0 # most recent address that comes into a pair of bytes for 8-bit masking
+prev_j = 0x0 # order of postfixes in each name node
+prev_bit = 0x0 # even or odd order of bytes globally sent for masking
+prev_start = 0x0 # most recent start address
+prev_count = 0x0 # most recent count of sensors
 #% %
 config = y['config']
 for c in config:  # loop over entries in configuration (sensor category)
@@ -166,46 +168,49 @@ for c in config:  # loop over entries in configuration (sensor category)
     start = c['start']
     count = c['count']
     for n in names:  # loop over names of sensors within a category
-        if (n=="R0B" and start!=prev_start+prev_count+1): #clkmonr0a and clkmon are from the same function in zynqmontask 
+        # clkmonr0a and clkmon are from the same function in zynqmontask
+        if n=="R0B" and start!=prev_start+prev_count+1:
             print("warning: the start address of clkmon should continue from clkr0a")
         if 'postfixes' in c:
             postfixes = c['postfixes']
             j = 0
             for p in postfixes:
-                addr = int((start + i)/2) 
-                bit = i%2 
+                addr = int((start + i)/2)
+                bit = i%2
                 if p == 'RESERVED':
                     i += 1
                     j += 1
                     continue
-                if (bit == 1 and j == 0):   #the previous name node has odd bytes so this postfix node uses the previous postfix address but masks off the lower byte 
+                if bit == 1 and j == 0:   # previous name node has odd bytes,
+                    # so this postfix node uses the previous postfix address but
+                    # masks off the lower byte
                     pp = node = ET.SubElement(cm, 'node')
                     pp.set('id', n)
                     pp.set('address', str(hex(prev_addr)))
                     node = make_node(pp, p, c, j, bit, n)
-                elif (bit == 0 and j == 0): #starting a new postfix node in a new name node
+                elif bit == 0 and j == 0: #starting a new postfix node in a new name node
                     pp = node = ET.SubElement(cm, 'node')
                     pp.set('id', n)
                     pp.set('address', str(hex(addr)))
                     node = make_node(pp, p, c, j, bit, n)
-                else: # any non-first byte in a name node 
+                else: # any non-first byte in a name node
                     if (prev_bit == 0):  #the upper byte of the previous postfix node
                         node = make_node(pp, p, c, j, bit, n)
-                    else :               #the low byte with an increasing postfix node by one 
+                    else :               #the low byte with an increasing postfix node by one
                         node = make_node(pp, p, c, j+1, bit, n)
                 if (prev_bit == bit and prev_addr == addr and prev_addr != 0) :
-                    print("warning : please check if masks overlapped at node ", n, " addr ", hex(prev_addr))
+                    print(f"warning: check if masks overlap at node {n} addr {hex(prev_addr)}")
                 prev_addr = addr
-                prev_j = j  
+                prev_j = j
                 prev_bit = bit
                 i += 1
                 j += 1
         else:
             make_node(cm, n, c, start+i, (start+i)%2, "")
-            if (prev_bit == (start+i)%2 and prev_addr == int((start+i)/2) and prev_addr != 0) :
-                print("warning : please check if masks overlapped at node ", n, " addr ", hex(prev_addr))
+            if prev_bit == (start+i)%2 and prev_addr == int((start+i)/2) and prev_addr != 0:
+                print(f"warning: check if masks overlap at node {n} addr {hex(prev_addr)}")
             prev_addr = int((start + i)/2)
-            prev_bit = (start+i)%2 
+            prev_bit = (start+i)%2
             i += 1
         prev_start = start
         prev_count = count
@@ -219,9 +224,7 @@ if args.verbose:
     print("writing to file", out_name)
 tree.write(out_name)
 
-#% %
-
-#create a list of objects
+# create a list of objects
 entries = []
 for c in config:  # loop over entries in configuration (sensor category)
     if not 'start' in c:
