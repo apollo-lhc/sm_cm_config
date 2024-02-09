@@ -6,7 +6,7 @@ import argparse
 import os
 import yaml
 
-zm_num_entries = 1024
+ZM_NUM_ENTRIES = 1024
 
 #% %
 def make_node(parent: ET.Element, myid: str, thedict: dict, addr2: int, i_bit: int,
@@ -115,7 +115,7 @@ class reg:
 
     def overloads(self):
         """check if the object overloads the register space"""
-        if self.start + self.size >= zm_num_entries - 1:
+        if self.start + self.size >= ZM_NUM_ENTRIES - 1:
             return True
         return False
 
